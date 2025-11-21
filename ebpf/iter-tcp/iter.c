@@ -1,4 +1,6 @@
 //go:build ignore
+// SPDX-License-Identifier: GPL-2.0
+/* Copyright 2025 Leon Hwang */
 
 #include "bpf_all.h"
 
@@ -11,11 +13,7 @@ int iter_tcp(struct bpf_iter__tcp *ctx)
 	struct sock *sk;
 	struct sk_buff_head *queue;
 	struct sk_buff *skb;
-	struct socket *sock;
-	struct file *file;
-	struct pid *pid;
 	int qlen, cnt = 0, cnt_pp = 0;
-	int pid_nr = 0;
 
 	if (!skc)
 		return 0;
@@ -40,23 +38,10 @@ int iter_tcp(struct bpf_iter__tcp *ctx)
         if (cnt == 0)
                 return 0;
 
-	// Get process info
-	sock = BPF_CORE_READ(sk, sk_socket);
-	if (sock) {
-		file = BPF_CORE_READ(sock, file);
-		if (file) {
-			pid = BPF_CORE_READ(file, f_owner.pid);
-			if (pid) {
-				pid_nr = BPF_CORE_READ(pid, numbers[0].nr);
-			}
-		}
-	}
-
-	BPF_SEQ_PRINTF(seq, "state=%d src=%pI4:%u dst=%pI4:%u pid=%d\n",
+	BPF_SEQ_PRINTF(seq, "state=%d src=%pI4:%u dst=%pI4:%u\n",
 		       skc->skc_state,
 		       &skc->skc_rcv_saddr, skc->skc_num,
-		       &skc->skc_daddr, bpf_ntohs(skc->skc_dport),
-		       pid_nr);
+		       &skc->skc_daddr, bpf_ntohs(skc->skc_dport));
 
 	BPF_SEQ_PRINTF(seq, "  rx_queue: qlen=%d iterated=%d (pp_recycle=%d)\n",
 		       qlen, cnt, cnt_pp);
